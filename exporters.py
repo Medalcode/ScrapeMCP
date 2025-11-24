@@ -1,19 +1,28 @@
+import csv
+import io
+import json
+
+
+_FORMULA_CHARS = ("=", "+", "-", "@")
+
+
+def _sanitize(val: str) -> str:
+    if val and val[0] in _FORMULA_CHARS:
+        return "'" + val
+    return val
+
+
 def to_csv(data) -> str:
     if isinstance(data, list) and data and isinstance(data[0], dict):
         headers = list(data[0].keys())
-        lines = [",".join(headers)]
+        buf = io.StringIO()
+        writer = csv.DictWriter(buf, fieldnames=headers)
+        writer.writeheader()
         for item in data:
-            lines.append(",".join(str(item.get(h, "")).replace(",", "\\,") for h in headers))
-        return "\n".join(lines)
+            writer.writerow({k: _sanitize(str(v)) for k, v in item.items()})
+        return buf.getvalue().strip()
     if isinstance(data, dict) and "items" in data and data["items"]:
-        items = data["items"]
-        if items and isinstance(items[0], dict):
-            headers = list(items[0].keys())
-            lines = [",".join(headers)]
-            for item in items:
-                lines.append(",".join(str(item.get(h, "")).replace(",", "\\,") for h in headers))
-            return "\n".join(lines)
-    import json
+        return to_csv(data["items"])
     return json.dumps(data, indent=2)
 
 
