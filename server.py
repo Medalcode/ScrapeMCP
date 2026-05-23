@@ -5,6 +5,7 @@ from scrapers.page import PageScraper
 from scrapers.table import TableScraper
 from scrapers.list_scraper import ListScraper
 from scrapers.sitemap import SitemapScraper
+from exporters import to_csv, to_markdown
 
 mcp = FastMCP("ScrapeMCP")
 
@@ -80,48 +81,12 @@ def scrape_sitemap(url: str, max_pages: int = 20) -> str:
 def export(data: str, format: str = "csv") -> str:
     parsed = json.loads(data)
     if format == "csv":
-        if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
-            headers = list(parsed[0].keys())
-            lines = [",".join(headers)]
-            for item in parsed:
-                lines.append(",".join(str(item.get(h, "")).replace(",", "\\,") for h in headers))
-            return "\n".join(lines)
-        elif isinstance(parsed, dict) and "items" in parsed and parsed["items"]:
-            items = parsed["items"]
-            if items and isinstance(items[0], dict):
-                headers = list(items[0].keys())
-                lines = [",".join(headers)]
-                for item in items:
-                    lines.append(",".join(str(item.get(h, "")).replace(",", "\\,") for h in headers))
-                return "\n".join(lines)
-        return json.dumps(parsed, indent=2)
+        return to_csv(parsed)
     if format == "json":
         return json.dumps(parsed, indent=2, ensure_ascii=False)
     if format == "markdown":
-        return _to_markdown(parsed)
+        return to_markdown(parsed)
     return json.dumps(parsed, indent=2)
-
-
-def _to_markdown(data) -> str:
-    if isinstance(data, list) and data and isinstance(data[0], dict):
-        headers = list(data[0].keys())
-        lines = ["| " + " | ".join(headers) + " |"]
-        lines.append("| " + " | ".join("---" for _ in headers) + " |")
-        for item in data:
-            lines.append("| " + " | ".join(str(item.get(h, "")) for h in headers) + " |")
-        return "\n".join(lines)
-    if isinstance(data, dict):
-        result = []
-        for key, value in data.items():
-            if isinstance(value, list) and value and isinstance(value[0], dict):
-                result.append(f"## {key}")
-                result.append(_to_markdown(value))
-            elif isinstance(value, list):
-                result.append(f"**{key}**: {', '.join(str(v) for v in value)}")
-            else:
-                result.append(f"**{key}**: {value}")
-        return "\n\n".join(result)
-    return str(data)
 
 
 if __name__ == "__main__":

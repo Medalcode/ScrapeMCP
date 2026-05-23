@@ -1,0 +1,5 @@
+[project]
+name = "scrapemcp"
+version = "1.0.0"
+description = "Web scraping MCP server"
+dependencies = ["mcp", "requests", "beautifulsoup4", "html5lib", "httpx"]

@@ -1,6 +1,11 @@
+import logging
+import time
+from collections import deque
 from urllib.parse import urljoin, urlparse
 
 from scrapers.base import BaseScraper, ScrapeResult
+
+logger = logging.getLogger("scrapemcp.list_scraper")
 
 
 class ListScraper(BaseScraper):
@@ -44,11 +49,11 @@ class ListScraper(BaseScraper):
                          fields: dict[str, str], max_pages: int = 10) -> ScrapeResult:
         visited = set()
         all_items = []
-        to_visit = [start_url]
+        to_visit = deque([start_url])
         pages = 0
 
         while to_visit and pages < max_pages:
-            url = to_visit.pop(0)
+            url = to_visit.popleft()
             if url in visited:
                 continue
             visited.add(url)
@@ -63,6 +68,8 @@ class ListScraper(BaseScraper):
                         entry[key] = el.get_text(strip=True) if el else None
                     all_items.append(entry)
 
+                logger.info("Scraped page %d: %s", pages + 1, url)
+
                 for link in soup.select(link_selector):
                     href = link.get("href")
                     if href:
@@ -71,7 +78,9 @@ class ListScraper(BaseScraper):
                             to_visit.append(full)
 
                 pages += 1
+                time.sleep(1)
             except Exception:
+                logger.exception("Failed to scrape page: %s", url)
                 continue
 
         return ScrapeResult(url=start_url, status=200, data={
